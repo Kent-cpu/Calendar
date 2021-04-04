@@ -1,6 +1,6 @@
+# -*- coding: utf-8 -*-
 import telebot
 import gspread
-import calendar
 import datetime
 from bs4 import BeautifulSoup
 from datetime import date
@@ -41,6 +41,7 @@ def write(path, htmlEl, className, itemName): # записывает в google s
             stateWeek =  "Четная неделя" if datetime(el["Год"], el["Месяц"], el["День"]).isocalendar()[1] % 2 == 0 else "Нечетная неделя"           
             bufWorksheet = sh.worksheet(stateWeek)
             textCell = f"{itemName} {el['День']}.{el['Месяц']}.{el['Год']}"
+            #textCell = itemName + el["День"] + '.'+el["Месяц"]+"."+el["Год"]
             bufWorksheet.update(koordinateCell[itemName], textCell)
             break
 
