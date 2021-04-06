@@ -1,9 +1,10 @@
 import telebot
 import gspread
 import datetime
+import calendar
 from bs4 import BeautifulSoup
 from datetime import date
-from datetime import datetime
+#from datetime import datetime
 
 gc = gspread.service_account(filename="creds.json")
 sh = gc.open("Расписание")
@@ -15,7 +16,7 @@ def determineParity(currentDate): # определяет четность нед
         return "Четная неделя"
     return "Нечетная неделя"
 
-worksheet = sh.worksheet(determineParity(datetime.now())) # datetime.now = 2021-04-05 01:21:16.883348
+worksheet = sh.worksheet(determineParity(datetime.datetime.now())) # datetime.now = 2021-04-05 01:21:16.883348
 
 def parse(path, htmlEl, className): # парсит из определенного html контента дедлайн и возращает отформатированный список словарей с датами
     with open(path, encoding= 'utf-8') as file:
@@ -32,24 +33,25 @@ def parse(path, htmlEl, className): # парсит из определенног
     return allDedlineList 
 
 
-def write(path, htmlEl, className, itemName): # записывает в google shets дедлайны 
+def write(path, htmlEl, className, itemName, currDate): # записывает в google shets дедлайны currDate - datetime.date.today()
     dedline = parse(path, htmlEl, className)
-    currentDatetime = datetime.now().date() #Год-месяц-день
+    #nextWeek = datetime.timedelta(days = 7) + d # datetime.date
+    #dNext = datetime.date(nextWeek.year, nextWeek.month, nextWeek.day) # правильно
     for el in dedline: 
-        if currentDatetime.day <= el["День"] and currentDatetime.month <= el["Месяц"] and currentDatetime.year <= el["Год"]:
-            stateWeek = determineParity(datetime(el["Год"], el["Месяц"], el["День"]))           
+        if currDate.day <= el["День"] and currDate.month <= el["Месяц"] and currDate.year <= el["Год"]:
+            stateWeek = determineParity(datetime.date(el["Год"], el["Месяц"], el["День"]))           
             textCell = f"{itemName} {el['День']}.{el['Месяц']}.{el['Год']}"
             sh.worksheet(stateWeek).update(koordinateCell[itemName], textCell)
             break
-
+            
 def clearDedline():
     for key in koordinateCell.keys():
         sh.worksheet("Нечетная неделя").update(koordinateCell[key], key)
         sh.worksheet("Четная неделя").update(koordinateCell[key], key)
         
 clearDedline()
-write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20")
-write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20")
+#write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20")
+#write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20")
 
 def beauPrint(objStr):
     return "\n".join(study for study in objStr)
@@ -62,7 +64,9 @@ def startWork(message):
 
 @bot.message_handler(commands=['Сегодня'])
 def myToday(message):
-    bot.send_message(message.chat.id, beauPrint(worksheet.col_values(datetime.now().isocalendar()[2]))) # Получаем индекс дня Понедельник - 1 и выводим.
+    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", datetime.date.today())
+    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", datetime.date.today())
+    bot.send_message(message.chat.id, beauPrint(worksheet.col_values(datetime.datetime.now().isocalendar()[2]))) # Получаем индекс дня Понедельник - 1 и выводим.
   
 
 @bot.message_handler(commands=['Завтра'])
@@ -75,13 +79,19 @@ def tomorrow(message):
 
 @bot.message_handler(commands=['Неделя'])
 def thisWeek(message):
+    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", datetime.date.today())
+    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", datetime.date.today())
     for dayWeek in range(1 , 6): 
         bot.send_message(message.chat.id, beauPrint(worksheet.col_values(dayWeek)))
 
 
 @bot.message_handler(commands=['Неделя_сл'])
 def nextWeek(message):
+    nextWeek = datetime.timedelta(days = 7) + datetime.date.today() # datetime.date
+    dNext = datetime.date(nextWeek.year, nextWeek.month, nextWeek.day)
     buf = worksheet
+    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", dNext)
+    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", dNext)
     if determineParity(date.today()) == "Четная неделя":
         buf = sh.worksheet("Нечетная неделя")
     else:
