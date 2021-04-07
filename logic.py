@@ -3,19 +3,23 @@ import gspread
 import datetime
 import calendar
 from bs4 import BeautifulSoup
-from datetime import date
+from datetime import date, timedelta
 
 gc = gspread.service_account(filename="creds.json")
 sh = gc.open("Расписание")
 bot = telebot.TeleBot("1799617235:AAH6YI3rdpbthgXvZxryYNWzQzxzl11cbXc")
 koordinateCell = {"Программирование (лаб) 9:45-11:20": "A3", "Исит (лаб) 11:45-13:20": "A4"}
 
-def determineParity(currentDate): # определяет четность недели date || datetime
-    if currentDate.isocalendar()[1] % 2 == 0:
-        return "Четная неделя"
-    return "Нечетная неделя"
+def determineParity(currentDate): # определяет четность недели
+    year = currentDate.year if currentDate.month >= 9 else currentDate.year - 1
+    startDate = datetime.date(year, 9, 1)
+    d1 = startDate - timedelta(days = startDate.weekday())
+    d2 = currentDate - timedelta(days = currentDate.weekday())
+    if ((d2-d1).days // 7) % 2 == 0:
+        return "Нечетная неделя"
+    return "Четная неделя"  
 
-worksheet = sh.worksheet(determineParity(datetime.datetime.now())) # datetime.now = 2021-04-05 01:21:16.883348
+worksheet = sh.worksheet(determineParity(date.today())) # datetime.now = 2021-04-05 01:21:16.883348
 
 def parse(path, htmlEl, className): # парсит из определенного html контента дедлайн и возращает отформатированный список словарей с датами
     with open(path, encoding= 'utf-8') as file:
@@ -32,7 +36,7 @@ def parse(path, htmlEl, className): # парсит из определенног
     return allDedlineList 
 
 
-def write(path, htmlEl, className, itemName, currDate): # записывает в google shets дедлайны currDate - datetime.date.today()
+def write(path, htmlEl, className, itemName, currDate): # записывает в google shets дедлайны
     dedline = parse(path, htmlEl, className)
     for el in dedline: 
         if currDate.day <= el["День"] and currDate.month <= el["Месяц"] and currDate.year <= el["Год"]:
@@ -85,7 +89,7 @@ def thisWeek(message):
 
 @bot.message_handler(commands=['Неделя_сл'])
 def nextWeek(message):
-    nextWeek = datetime.timedelta(days = 7) + datetime.date.today() # datetime.date
+    nextWeek = datetime.timedelta(days = 7) + datetime.date.today()
     dNext = datetime.date(nextWeek.year, nextWeek.month, nextWeek.day)
     fillingDeadlines(dNext)
     buf = worksheet
