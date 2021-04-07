@@ -4,14 +4,13 @@ import datetime
 import calendar
 from bs4 import BeautifulSoup
 from datetime import date
-#from datetime import datetime
 
 gc = gspread.service_account(filename="creds.json")
 sh = gc.open("Расписание")
 bot = telebot.TeleBot("1799617235:AAH6YI3rdpbthgXvZxryYNWzQzxzl11cbXc")
 koordinateCell = {"Программирование (лаб) 9:45-11:20": "A3", "Исит (лаб) 11:45-13:20": "A4"}
 
-def determineParity(currentDate): # определяет четность недели
+def determineParity(currentDate): # определяет четность недели date || datetime
     if currentDate.isocalendar()[1] % 2 == 0:
         return "Четная неделя"
     return "Нечетная неделя"
@@ -35,8 +34,6 @@ def parse(path, htmlEl, className): # парсит из определенног
 
 def write(path, htmlEl, className, itemName, currDate): # записывает в google shets дедлайны currDate - datetime.date.today()
     dedline = parse(path, htmlEl, className)
-    #nextWeek = datetime.timedelta(days = 7) + d # datetime.date
-    #dNext = datetime.date(nextWeek.year, nextWeek.month, nextWeek.day) # правильно
     for el in dedline: 
         if currDate.day <= el["День"] and currDate.month <= el["Месяц"] and currDate.year <= el["Год"]:
             stateWeek = determineParity(datetime.date(el["Год"], el["Месяц"], el["День"]))           
@@ -49,13 +46,15 @@ def clearDedline():
         sh.worksheet("Нечетная неделя").update(koordinateCell[key], key)
         sh.worksheet("Четная неделя").update(koordinateCell[key], key)
         
-clearDedline()
-#write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20")
-#write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20")
 
 def beauPrint(objStr):
     return "\n".join(study for study in objStr)
 
+def fillingDeadlines(todayYear):
+    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", todayYear)
+    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", todayYear)
+
+clearDedline()
 
 @bot.message_handler(commands=['start'])
 def startWork(message):
@@ -64,23 +63,22 @@ def startWork(message):
 
 @bot.message_handler(commands=['Сегодня'])
 def myToday(message):
-    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", datetime.date.today())
-    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", datetime.date.today())
+    fillingDeadlines(datetime.date.today())
     bot.send_message(message.chat.id, beauPrint(worksheet.col_values(datetime.datetime.now().isocalendar()[2]))) # Получаем индекс дня Понедельник - 1 и выводим.
   
 
 @bot.message_handler(commands=['Завтра'])
 def tomorrow(message):
-    currentDate = datetime.now()
+    currentDate = datetime.date.today()
     nextDay = currentDate.day + 1
     d = date(currentDate.year, currentDate.month, nextDay)
+    fillingDeadlines(d)
     bufWorksheet = sh.worksheet(determineParity(d))
-    bot.send_message(message.chat.id, beauPrint(bufWorksheet.col_values(datetime.now().isocalendar()[2] + 1)))
+    bot.send_message(message.chat.id, beauPrint(bufWorksheet.col_values(datetime.datetime.now().isocalendar()[2] + 1)))
 
 @bot.message_handler(commands=['Неделя'])
 def thisWeek(message):
-    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", datetime.date.today())
-    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", datetime.date.today())
+    fillingDeadlines(datetime.date.today())
     for dayWeek in range(1 , 6): 
         bot.send_message(message.chat.id, beauPrint(worksheet.col_values(dayWeek)))
 
@@ -89,9 +87,8 @@ def thisWeek(message):
 def nextWeek(message):
     nextWeek = datetime.timedelta(days = 7) + datetime.date.today() # datetime.date
     dNext = datetime.date(nextWeek.year, nextWeek.month, nextWeek.day)
+    fillingDeadlines(dNext)
     buf = worksheet
-    write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", dNext)
-    write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", dNext)
     if determineParity(date.today()) == "Четная неделя":
         buf = sh.worksheet("Нечетная неделя")
     else:
