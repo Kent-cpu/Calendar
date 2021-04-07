@@ -19,8 +19,13 @@ def determineParity(currentDate): # определяет четность нед
         return "Нечетная неделя"
     return "Четная неделя"  
 
-worksheet = sh.worksheet(determineParity(date.today())) # datetime.now = 2021-04-05 01:21:16.883348
+def clearDedline():
+    for key in koordinateCell.keys():
+        sh.worksheet("Нечетная неделя").update(koordinateCell[key], key)
+        sh.worksheet("Четная неделя").update(koordinateCell[key], key)
 
+worksheet = sh.worksheet(determineParity(date.today())) 
+clearDedline()
 def parse(path, htmlEl, className): # парсит из определенного html контента дедлайн и возращает отформатированный список словарей с датами
     with open(path, encoding= 'utf-8') as file:
         fileParse = file.read()
@@ -44,21 +49,15 @@ def write(path, htmlEl, className, itemName, currDate): # записывает �
             textCell = f"{itemName} {el['День']}.{el['Месяц']}.{el['Год']}"
             sh.worksheet(stateWeek).update(koordinateCell[itemName], textCell)
             break
-            
-def clearDedline():
-    for key in koordinateCell.keys():
-        sh.worksheet("Нечетная неделя").update(koordinateCell[key], key)
-        sh.worksheet("Четная неделя").update(koordinateCell[key], key)
-        
-
+              
 def beauPrint(objStr):
     return "\n".join(study for study in objStr)
+
 
 def fillingDeadlines(todayYear):
     write("icit.html", "td", "dedline", "Исит (лаб) 11:45-13:20", todayYear)
     write("programm.html", "td", "dedline", "Программирование (лаб) 9:45-11:20", todayYear)
 
-clearDedline()
 
 @bot.message_handler(commands=['start'])
 def startWork(message):
