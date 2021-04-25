@@ -14,21 +14,21 @@ sh = gc.open("Расписание")
 bot = telebot.TeleBot("1799617235:AAH6YI3rdpbthgXvZxryYNWzQzxzl11cbXc")
 koordinateCell = {"Программирование (лаб) 9:45-11:20": "A3", "Исит (лаб) 11:45-13:20": "A4"}
 driver = webdriver.Chrome('chromedriver.exe')
-programm , icit = "", ""
+programm , icit, login, password = "", "", "", ""
 
 def parseDedline(needSubject):
-    time.sleep(5)
+    time.sleep(6)
     subject = driver.find_elements_by_xpath("//input[@title = 'Выбрать']")
     indexSubjectButton = {"Программирование": 13, "Исит": 12} 
     subject[indexSubjectButton[needSubject]].click()
-    time.sleep(4)
+    time.sleep(6)
     htmlContent = BeautifulSoup(driver.page_source, "lxml")
     allElementParse = ""
     for el in htmlContent.find_all("td", class_= False):
         allElementParse += el.get_text(strip = True)
     allElementParse  = re.findall(r"\d{2}-\d{2}-\d{4}", allElementParse)
     driver.find_element_by_xpath('//input[@value="Вернуться"]').send_keys(Keys.ENTER)
-    time.sleep(4)
+    time.sleep(6)
     return allElementParse
 
 def authorization(login, password):
@@ -83,10 +83,22 @@ def fillingDeadlines(todayYear):
     write("Исит (лаб) 11:45-13:20", todayYear, parse(icit))
     write("Программирование (лаб) 9:45-11:20", todayYear, parse(programm))
 
-
 @bot.message_handler(commands=['start'])
+def inputLogin(message):
+    global login
+    bot.send_message(message.chat.id, "Введите логин:")
+    login = message.text
+    bot.register_next_step_handler(message, inputPassword)
+
+def inputPassword(message):
+    global password
+    bot.send_message(message.chat.id, "Введите пароль:")
+    password = message.text
+    bot.register_next_step_handler(message, startWork)
+
+
 def startWork(message):
-    authorization("stud67266", "bZqb11Fy")
+    authorization(login, password)
     global programm, icit
     programm, icit = parseDedline("Программирование"), parseDedline("Исит")
     bot.send_message(message.chat.id, "Команды:\n1./Сегодня\n2./Завтра\n3./Неделя\n4./Неделя_сл")
@@ -116,7 +128,7 @@ def thisWeek(message):
 
 @bot.message_handler(commands=['Неделя_сл'])
 def nextWeek(message):
-    nextWeek = datetime.timedelta(days = datetime.datetime.today().weekday() + 1) + datetime.date.today()
+    nextWeek = datetime.timedelta(days = 7 - datetime.datetime.today().isoweekday() + 1) + datetime.date.today()
     fillingDeadlines(nextWeek)
     buf = worksheet
     if determineParity(date.today()) == "Четная неделя":
