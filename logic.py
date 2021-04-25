@@ -34,10 +34,12 @@ def parseDedline(needSubject):
 def authorization(login, password):
     driver.get('https://eios.kemsu.ru/a/eios')
     time.sleep(5)
+    driver.find_element_by_name('username').clear()
     driver.find_element_by_name('username').send_keys("stud67266")
+    driver.find_element_by_name('password').clear()
     driver.find_element_by_name('password').send_keys("bZqb11Fy")
     driver.find_element_by_class_name("css-h0m9oy").send_keys(Keys.ENTER)
-    time.sleep(5)
+    time.sleep(10)
     linkInfo = driver.find_element_by_link_text('Информационное обеспечение учебного процесса (ИнфОУПро)')
     driver.get(linkInfo.get_attribute("href"))
 
@@ -70,7 +72,7 @@ def parse(subjectParse): # парсит из определенного html к�
 
 def write(itemName, currDate, subjectPars): # записывает в google shets дедлайны
     for el in range(0, len(subjectPars)):
-        if subjectPars[el] >= currDate:
+        if subjectPars[el] >= currDate and subjectPars[el].day - currDate.day <= 7 and subjectPars[el].month - currDate.month <= 1:
             stateWeek = determineParity(subjectPars[el])           
             sh.worksheet(stateWeek).update(koordinateCell[itemName], itemName + " " + subjectPars[el].strftime("%d.%m.%Y"))
             break
@@ -98,10 +100,12 @@ def inputPassword(message):
 
 
 def startWork(message):
+    bot.send_message(message.chat.id, "Пожалуйста подождите :)")
     authorization(login, password)
     global programm, icit
     programm, icit = parseDedline("Программирование"), parseDedline("Исит")
     bot.send_message(message.chat.id, "Команды:\n1./Сегодня\n2./Завтра\n3./Неделя\n4./Неделя_сл")
+    driver.quit()
 
 
 @bot.message_handler(commands=['Сегодня'])
